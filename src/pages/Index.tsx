@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 
 const HERO_IMG =
   'https://cdn.poehali.dev/projects/d62ce3d2-69c5-434a-be68-17344a688bb3/files/a4fbd3bb-0d42-4e6c-97a0-9fe8ccf698a9.jpg';
+
+const STREAM_URL = 'https://pool.anison.fm/AniSonFM(320)';
 
 const NAV = [
   { id: 'home', label: 'Главная' },
@@ -56,13 +58,43 @@ const Equalizer = ({ active }: { active: boolean }) => (
 );
 
 const Index = () => {
-  const [playing, setPlaying] = useState(true);
+  const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [volume, setVolume] = useState(0.7);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
+  }, [volume]);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+    } else {
+      audio.src = STREAM_URL;
+      setLoading(true);
+      audio
+        .play()
+        .then(() => {
+          setPlaying(true);
+          setLoading(false);
+        })
+        .catch(() => {
+          setPlaying(false);
+          setLoading(false);
+        });
+    }
+  };
 
   const scrollTo = (id: string) =>
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
   return (
     <div className="min-h-screen bg-background text-foreground grid-bg overflow-x-hidden">
+      <audio ref={audioRef} preload="none" />
       {/* glow blobs */}
       <div className="pointer-events-none fixed -top-40 -left-40 w-96 h-96 rounded-full bg-neon-pink/20 blur-[120px]" />
       <div className="pointer-events-none fixed top-1/3 -right-40 w-96 h-96 rounded-full bg-neon-cyan/20 blur-[120px]" />
@@ -90,10 +122,14 @@ const Index = () => {
             ))}
           </nav>
           <Button
-            onClick={() => scrollTo('player')}
+            onClick={() => {
+              if (!playing) togglePlay();
+              scrollTo('player');
+            }}
             className="bg-neon-pink text-white hover:bg-neon-pink/90 font-display tracking-wider glow-pink"
           >
-            <Icon name="Play" size={16} className="mr-1" /> СЛУШАТЬ
+            <Icon name={playing ? 'Volume2' : 'Play'} size={16} className="mr-1" />
+            {playing ? 'В ЭФИРЕ' : 'СЛУШАТЬ'}
           </Button>
         </div>
       </header>
@@ -117,10 +153,14 @@ const Index = () => {
             <div className="flex flex-wrap gap-4">
               <Button
                 size="lg"
-                onClick={() => scrollTo('player')}
+                onClick={() => {
+                  togglePlay();
+                  scrollTo('player');
+                }}
                 className="bg-neon-pink text-white hover:bg-neon-pink/90 font-display text-base tracking-wider glow-pink"
               >
-                <Icon name="Headphones" size={18} className="mr-2" /> ВКЛЮЧИТЬ ЭФИР
+                <Icon name="Headphones" size={18} className="mr-2" />
+                {playing ? 'ОСТАНОВИТЬ' : 'ВКЛЮЧИТЬ ЭФИР'}
               </Button>
               <Button
                 size="lg"
@@ -155,30 +195,34 @@ const Index = () => {
               </div>
             </div>
             <div className="flex-1 text-center lg:text-left">
-              <p className="text-neon-cyan text-sm font-medium mb-1">СЕЙЧАС ИГРАЕТ</p>
-              <h3 className="font-display text-3xl font-bold mb-1">Gurenge — LiSA</h3>
-              <p className="text-muted-foreground mb-6">OST «Demon Slayer» · Night Anime Mix</p>
+              <p className="text-neon-cyan text-sm font-medium mb-1 flex items-center justify-center lg:justify-start gap-2">
+                <span className={`h-2 w-2 rounded-full ${playing ? 'bg-neon-pink animate-pulse' : 'bg-muted-foreground'}`} />
+                {playing ? 'В ЭФИРЕ' : loading ? 'ПОДКЛЮЧЕНИЕ…' : 'ЭФИР НА ПАУЗЕ'}
+              </p>
+              <h3 className="font-display text-3xl font-bold mb-1">AniSon.FM</h3>
+              <p className="text-muted-foreground mb-6">Аниме радио · 320 kbps · live-поток</p>
               <div className="flex items-center justify-center lg:justify-start gap-6">
-                <button className="text-muted-foreground hover:text-neon-cyan transition">
-                  <Icon name="SkipBack" size={26} />
-                </button>
                 <button
-                  onClick={() => setPlaying((p) => !p)}
+                  onClick={togglePlay}
                   className="flex h-16 w-16 items-center justify-center rounded-full bg-neon-pink text-white glow-pink hover:scale-105 transition"
                 >
-                  <Icon name={playing ? 'Pause' : 'Play'} size={28} />
-                </button>
-                <button className="text-muted-foreground hover:text-neon-cyan transition">
-                  <Icon name="SkipForward" size={26} />
+                  <Icon name={loading ? 'Loader' : playing ? 'Pause' : 'Play'} size={28} className={loading ? 'animate-spin' : ''} />
                 </button>
                 <Equalizer active={playing} />
               </div>
             </div>
             <div className="flex flex-col items-center gap-3">
-              <Icon name="Volume2" size={22} className="text-neon-cyan" />
-              <div className="h-32 w-2 rounded-full bg-muted overflow-hidden flex items-end">
-                <div className="w-full bg-gradient-to-t from-neon-pink to-neon-cyan" style={{ height: '70%' }} />
-              </div>
+              <Icon name={volume === 0 ? 'VolumeX' : 'Volume2'} size={22} className="text-neon-cyan" />
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={volume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className="h-32 w-2 cursor-pointer appearance-none rounded-full bg-muted accent-neon-pink"
+                style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
+              />
             </div>
           </div>
         </div>
