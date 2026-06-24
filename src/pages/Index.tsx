@@ -11,7 +11,7 @@ const NAV = [
   { id: 'home', label: 'Главная' },
   { id: 'player', label: 'Плеер' },
   { id: 'schedule', label: 'Расписание' },
-  { id: 'streams', label: 'Трансляции' },
+
   { id: 'about', label: 'О проекте' },
   { id: 'contacts', label: 'Контакты' },
 ];
@@ -24,11 +24,7 @@ const SCHEDULE = [
   { time: '23:00', title: 'Lo-Fi Sleep', host: 'DJ Yume', tag: 'LO-FI' },
 ];
 
-const STREAMS = [
-  { title: 'Эфир с косплеерами', viewers: '1.2K', live: true, emoji: '🎤' },
-  { title: 'Разбор новинок сезона', viewers: '870', live: true, emoji: '📺' },
-  { title: 'Караоке-ночь', viewers: '640', live: false, emoji: '🎶' },
-];
+
 
 const ARCHIVE = [
   { title: 'Unravel', artist: 'TK from Ling tosite sigure', anime: 'Tokyo Ghoul' },
@@ -401,32 +397,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* STREAMS */}
-      <section id="streams" className="container py-16">
-        <h2 className="font-display text-4xl font-bold mb-8">
-          ТРАНСЛЯЦИИ <span className="text-neon-cyan">LIVE</span>
-        </h2>
-        <div className="grid sm:grid-cols-3 gap-6">
-          {STREAMS.map((s) => (
-            <div key={s.title} className="rounded-2xl glow-border bg-card/50 p-6 hover:-translate-y-1 transition">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-4xl">{s.emoji}</span>
-                {s.live ? (
-                  <span className="flex items-center gap-1.5 rounded-full bg-neon-pink/20 px-3 py-1 text-xs font-bold text-neon-pink">
-                    <span className="h-2 w-2 rounded-full bg-neon-pink animate-pulse" /> LIVE
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">скоро</span>
-                )}
-              </div>
-              <h3 className="font-display text-xl font-bold mb-2">{s.title}</h3>
-              <p className="text-muted-foreground text-sm flex items-center gap-1.5">
-                <Icon name="Eye" size={14} /> {s.viewers} зрителей
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
+
 
       {/* ARCHIVE */}
       <section id="archive" className="container py-16">
