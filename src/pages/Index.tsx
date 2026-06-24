@@ -11,7 +11,7 @@ const NAV = [
   { id: 'home', label: 'Главная' },
   { id: 'player', label: 'Плеер' },
   { id: 'schedule', label: 'Расписание' },
-
+  { id: 'archive', label: 'Архив' },
   { id: 'about', label: 'О проекте' },
   { id: 'contacts', label: 'Контакты' },
 ];
@@ -22,17 +22,6 @@ const SCHEDULE = [
   { time: '16:00', title: 'Vocaloid Hour', host: 'DJ Miku', tag: 'VOCALOID' },
   { time: '20:00', title: 'Night Anime Mix', host: 'DJ Kuro', tag: 'MIX' },
   { time: '23:00', title: 'Lo-Fi Sleep', host: 'DJ Yume', tag: 'LO-FI' },
-];
-
-
-
-const ARCHIVE = [
-  { title: 'Unravel', artist: 'TK from Ling tosite sigure', anime: 'Tokyo Ghoul' },
-  { title: 'Gurenge', artist: 'LiSA', anime: 'Demon Slayer' },
-  { title: 'Cruel Angel’s Thesis', artist: 'Yoko Takahashi', anime: 'Evangelion' },
-  { title: 'Silhouette', artist: 'KANA-BOON', anime: 'Naruto' },
-  { title: 'Again', artist: 'YUI', anime: 'Fullmetal Alchemist' },
-  { title: 'Departure!', artist: 'Masatoshi Ono', anime: 'Hunter x Hunter' },
 ];
 
 const PLAYLISTS = [
@@ -85,9 +74,24 @@ const Index = () => {
   const [loading, setLoading] = useState(false);
   const [volume, setVolume] = useState(0.7);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('anicoke_history');
+      if (!saved) return [];
+      return (JSON.parse(saved) as HistoryItem[]).map((h) => ({ ...h, playedAt: new Date(h.playedAt) }));
+    } catch { return []; }
+  });
+  const [archiveSearch, setArchiveSearch] = useState('');
   const lastTrackRef = useRef<string>('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const addToHistory = (anime: string, track: string) => {
+    setHistory((prev) => {
+      const next = [{ anime, track, playedAt: new Date() }, ...prev].slice(0, 100);
+      localStorage.setItem('anicoke_history', JSON.stringify(next));
+      return next;
+    });
+  };
 
   const fetchNowPlaying = async () => {
     try {
@@ -98,7 +102,7 @@ const Index = () => {
 
       if (trackKey && trackKey !== lastTrackRef.current && lastTrackRef.current) {
         const [prevAnime, prevTrack] = lastTrackRef.current.split('—');
-        setHistory((h) => [{ anime: prevAnime, track: prevTrack, playedAt: new Date() }, ...h].slice(0, 10));
+        addToHistory(prevAnime, prevTrack);
       }
       if (trackKey) lastTrackRef.current = trackKey;
 
@@ -148,6 +152,13 @@ const Index = () => {
 
   const scrollTo = (id: string) =>
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+
+  const filteredHistory = history.filter(
+    (t) =>
+      !archiveSearch ||
+      t.track.toLowerCase().includes(archiveSearch.toLowerCase()) ||
+      t.anime.toLowerCase().includes(archiveSearch.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground grid-bg overflow-x-hidden">
@@ -318,7 +329,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* HISTORY */}
+      {/* HISTORY (under player) */}
       {history.length > 0 && (
         <section className="container pb-6">
           <div className="rounded-3xl border border-border bg-card/40 backdrop-blur-xl p-6 lg:p-8">
@@ -327,7 +338,7 @@ const Index = () => {
               ИСТОРИЯ <span className="text-neon-purple">ЭФИРА</span>
             </h3>
             <div className="space-y-2">
-              {history.map((item, i) => (
+              {history.slice(0, 5).map((item, i) => (
                 <div
                   key={i}
                   className="flex items-center gap-4 rounded-xl px-4 py-3 bg-background/40 hover:bg-background/70 transition"
@@ -344,6 +355,14 @@ const Index = () => {
                 </div>
               ))}
             </div>
+            {history.length > 5 && (
+              <button
+                onClick={() => scrollTo('archive')}
+                className="mt-4 text-sm text-neon-cyan hover:underline"
+              >
+                Смотреть весь архив ({history.length} треков) →
+              </button>
+            )}
           </div>
         </section>
       )}
@@ -397,35 +416,86 @@ const Index = () => {
         </div>
       </section>
 
-
-
       {/* ARCHIVE */}
       <section id="archive" className="container py-16">
-        <div className="flex items-end justify-between mb-8">
-          <h2 className="font-display text-4xl font-bold">
-            АРХИВ <span className="text-neon-pink">ПЕСЕН</span>
-          </h2>
-          <span className="text-muted-foreground text-sm">{ARCHIVE.length}+ треков</span>
-        </div>
-        <div className="grid md:grid-cols-2 gap-3">
-          {ARCHIVE.map((t, i) => (
-            <div
-              key={t.title}
-              className="group flex items-center gap-4 rounded-xl border border-border bg-card/40 p-4 hover:glow-border transition cursor-pointer"
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+          <div>
+            <h2 className="font-display text-4xl font-bold">
+              АРХИВ <span className="text-neon-pink">ЭФИРА</span>
+            </h2>
+            <p className="text-muted-foreground text-sm mt-1">
+              {history.length > 0 ? `${history.length} треков накоплено · пополняется в реальном времени` : 'Включи эфир — архив начнёт заполняться автоматически'}
+            </p>
+          </div>
+          {history.length > 0 && (
+            <button
+              onClick={() => { setHistory([]); localStorage.removeItem('anicoke_history'); }}
+              className="text-xs text-muted-foreground hover:text-destructive transition self-start sm:self-auto"
             >
-              <span className="font-display text-lg text-muted-foreground w-6">{i + 1}</span>
-              <button className="flex h-10 w-10 items-center justify-center rounded-full bg-neon-cyan/15 text-neon-cyan group-hover:bg-neon-cyan group-hover:text-background transition">
-                <Icon name="Play" size={16} />
-              </button>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold truncate">{t.title}</h3>
-                <p className="text-muted-foreground text-sm truncate">{t.artist}</p>
-              </div>
-              <span className="hidden sm:block text-xs text-neon-purple truncate max-w-[120px]">{t.anime}</span>
-              <Icon name="Heart" size={18} className="text-muted-foreground hover:text-neon-pink transition" />
-            </div>
-          ))}
+              Очистить архив
+            </button>
+          )}
         </div>
+
+        {history.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-border bg-card/20 p-16 text-center">
+            <div className="text-5xl mb-4">📻</div>
+            <h3 className="font-display text-2xl font-bold mb-2">Архив пустой</h3>
+            <p className="text-muted-foreground">
+              Включи эфир — треки начнут накапливаться автоматически.<br />
+              До 100 последних песен хранятся между сессиями.
+            </p>
+            <Button
+              onClick={() => { togglePlay(); scrollTo('player'); }}
+              className="mt-6 bg-neon-pink text-white hover:bg-neon-pink/90 glow-pink font-display tracking-wider"
+            >
+              <Icon name="Play" size={16} className="mr-2" /> Включить эфир
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="relative mb-6">
+              <Icon name="Search" size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Поиск по треку или аниме..."
+                value={archiveSearch}
+                onChange={(e) => setArchiveSearch(e.target.value)}
+                className="w-full rounded-xl border border-border bg-card/50 pl-10 pr-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-neon-pink/60 transition"
+              />
+              {archiveSearch && (
+                <button
+                  onClick={() => setArchiveSearch('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <Icon name="X" size={14} />
+                </button>
+              )}
+            </div>
+            {filteredHistory.length === 0 ? (
+              <p className="text-center text-muted-foreground py-12">Ничего не найдено по запросу «{archiveSearch}»</p>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-3">
+                {filteredHistory.map((t, i) => (
+                  <div
+                    key={i}
+                    className="group flex items-center gap-4 rounded-xl border border-border bg-card/40 p-4 hover:glow-border transition"
+                  >
+                    <span className="font-display text-sm text-muted-foreground w-6 shrink-0">{i + 1}</span>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neon-cyan/15 text-neon-cyan shrink-0">
+                      <Icon name="Music" size={16} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold truncate text-sm">{t.track}</h3>
+                      <p className="text-neon-purple text-xs truncate">{t.anime}</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">{formatTime(t.playedAt)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </section>
 
       {/* ABOUT */}
