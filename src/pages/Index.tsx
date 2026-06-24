@@ -57,11 +57,52 @@ const Equalizer = ({ active }: { active: boolean }) => (
   </div>
 );
 
+interface NowPlaying {
+  anime: string;
+  track: string;
+  listeners: string;
+  duration: number;
+  fullDuration: number;
+}
+
+function parseOnAir(html: string): { anime: string; track: string } {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const text = tmp.textContent || '';
+  const clean = text.replace('В эфире:', '').trim();
+  const parts = clean.split('—').map((s) => s.trim());
+  return { anime: parts[0] || '', track: parts[1] || '' };
+}
+
 const Index = () => {
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [volume, setVolume] = useState(0.7);
+  const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const fetchNowPlaying = async () => {
+    try {
+      const res = await fetch('https://anison.fm/status.php?widget');
+      const data = await res.json();
+      const { anime, track } = parseOnAir(data.on_air || '');
+      setNowPlaying({
+        anime,
+        track,
+        listeners: data.listeners || '',
+        duration: data.duration || 0,
+        fullDuration: data.full_duration || 0,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchNowPlaying();
+    const id = setInterval(fetchNowPlaying, 10_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume;
@@ -198,9 +239,42 @@ const Index = () => {
               <p className="text-neon-cyan text-sm font-medium mb-1 flex items-center justify-center lg:justify-start gap-2">
                 <span className={`h-2 w-2 rounded-full ${playing ? 'bg-neon-pink animate-pulse' : 'bg-muted-foreground'}`} />
                 {playing ? 'В ЭФИРЕ' : loading ? 'ПОДКЛЮЧЕНИЕ…' : 'ЭФИР НА ПАУЗЕ'}
+                {nowPlaying?.listeners && (
+                  <span className="ml-2 text-muted-foreground font-normal flex items-center gap-1">
+                    <Icon name="Users" size={12} /> {nowPlaying.listeners}
+                  </span>
+                )}
               </p>
-              <h3 className="font-display text-3xl font-bold mb-1">AniSon.FM</h3>
-              <p className="text-muted-foreground mb-6">Аниме радио · 320 kbps · live-поток</p>
+
+              {nowPlaying ? (
+                <>
+                  <h3 className="font-display text-2xl lg:text-3xl font-bold mb-0.5 truncate">
+                    {nowPlaying.track || 'AniSon.FM'}
+                  </h3>
+                  <p className="text-neon-purple text-sm mb-1 truncate">{nowPlaying.anime}</p>
+                  <p className="text-muted-foreground text-xs mb-4">Аниме радио · 320 kbps · live-поток</p>
+                  {nowPlaying.fullDuration > 0 && (
+                    <div className="mb-5">
+                      <div className="h-1 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-neon-pink to-neon-cyan transition-all duration-1000"
+                          style={{ width: `${(nowPlaying.duration / nowPlaying.fullDuration) * 100}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                        <span>{Math.floor(nowPlaying.duration / 60)}:{String(nowPlaying.duration % 60).padStart(2, '0')}</span>
+                        <span>{Math.floor(nowPlaying.fullDuration / 60)}:{String(nowPlaying.fullDuration % 60).padStart(2, '0')}</span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h3 className="font-display text-3xl font-bold mb-1">AniSon.FM</h3>
+                  <p className="text-muted-foreground mb-6">Аниме радио · 320 kbps · live-поток</p>
+                </>
+              )}
+
               <div className="flex items-center justify-center lg:justify-start gap-6">
                 <button
                   onClick={togglePlay}
