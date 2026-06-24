@@ -65,6 +65,12 @@ interface NowPlaying {
   fullDuration: number;
 }
 
+interface HistoryItem {
+  anime: string;
+  track: string;
+  playedAt: Date;
+}
+
 function parseOnAir(html: string): { anime: string; track: string } {
   const tmp = document.createElement('div');
   tmp.innerHTML = html;
@@ -74,11 +80,17 @@ function parseOnAir(html: string): { anime: string; track: string } {
   return { anime: parts[0] || '', track: parts[1] || '' };
 }
 
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+
 const Index = () => {
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [volume, setVolume] = useState(0.7);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const lastTrackRef = useRef<string>('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const fetchNowPlaying = async () => {
@@ -86,6 +98,14 @@ const Index = () => {
       const res = await fetch('https://anison.fm/status.php?widget');
       const data = await res.json();
       const { anime, track } = parseOnAir(data.on_air || '');
+      const trackKey = `${anime}—${track}`;
+
+      if (trackKey && trackKey !== lastTrackRef.current && lastTrackRef.current) {
+        const [prevAnime, prevTrack] = lastTrackRef.current.split('—');
+        setHistory((h) => [{ anime: prevAnime, track: prevTrack, playedAt: new Date() }, ...h].slice(0, 10));
+      }
+      if (trackKey) lastTrackRef.current = trackKey;
+
       setNowPlaying({
         anime,
         track,
@@ -301,6 +321,36 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* HISTORY */}
+      {history.length > 0 && (
+        <section className="container pb-6">
+          <div className="rounded-3xl border border-border bg-card/40 backdrop-blur-xl p-6 lg:p-8">
+            <h3 className="font-display text-2xl font-bold mb-5 flex items-center gap-3">
+              <Icon name="History" size={22} className="text-neon-purple" />
+              ИСТОРИЯ <span className="text-neon-purple">ЭФИРА</span>
+            </h3>
+            <div className="space-y-2">
+              {history.map((item, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 rounded-xl px-4 py-3 bg-background/40 hover:bg-background/70 transition"
+                >
+                  <span className="font-display text-sm text-neon-cyan w-12 shrink-0">{formatTime(item.playedAt)}</span>
+                  <div className="h-8 w-8 rounded-full bg-neon-purple/20 border border-neon-purple/30 flex items-center justify-center shrink-0">
+                    <Icon name="Music" size={14} className="text-neon-purple" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{item.track}</p>
+                    <p className="text-muted-foreground text-xs truncate">{item.anime}</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground hidden sm:block shrink-0">#{i + 1}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* PLAYLISTS */}
       <section className="container py-16">
