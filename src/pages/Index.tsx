@@ -465,13 +465,10 @@ const Index = () => {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button className="bg-neon-pink text-white hover:bg-neon-pink/90 glow-pink font-display tracking-wider">
-              <Icon name="Send" size={18} className="mr-2" /> TELEGRAM
+              <Icon name="Users" size={18} className="mr-2" /> ВКОНТАКТЕ
             </Button>
             <Button variant="outline" className="border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/10 font-display tracking-wider">
               <Icon name="Mail" size={18} className="mr-2" /> ПОЧТА
-            </Button>
-            <Button variant="outline" className="border-neon-purple/50 text-neon-purple hover:bg-neon-purple/10 font-display tracking-wider">
-              <Icon name="MessageCircle" size={18} className="mr-2" /> DISCORD
             </Button>
           </div>
         </div>
