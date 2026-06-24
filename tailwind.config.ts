@@ -18,7 +18,16 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				display: ['Oswald', 'sans-serif'],
+				body: ['Rubik', 'sans-serif'],
+			},
 			colors: {
+				neon: {
+					pink: 'hsl(var(--neon-pink))',
+					cyan: 'hsl(var(--neon-cyan))',
+					purple: 'hsl(var(--neon-purple))',
+				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
